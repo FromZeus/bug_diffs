@@ -1,0 +1,47 @@
+diff --git a/deployment/puppet/openstack/manifests/mongo_primary.pp b/deployment/puppet/openstack/manifests/mongo_primary.pp
+index 7f7f324..4b8e806 100644
+--- a/deployment/puppet/openstack/manifests/mongo_primary.pp
++++ b/deployment/puppet/openstack/manifests/mongo_primary.pp
+@@ -45,6 +45,10 @@ class openstack::mongo_primary (
+     set_parameter => $set_parameter,
+   } ->
+ 
++  exec { 'chown_mongo_log':
++    command => "/bin/chown -R syslog:syslog ${mongodb::params::logpath}",
++  } ->
++
+   class {'::mongodb::replset':
+     replset_setup   => $replset_setup,
+     replset_members => $ceilometer_replset_members,
+diff --git a/deployment/puppet/openstack/manifests/mongo_secondary.pp b/deployment/puppet/openstack/manifests/mongo_secondary.pp
+index d70cde7..c7d6995 100644
+--- a/deployment/puppet/openstack/manifests/mongo_secondary.pp
++++ b/deployment/puppet/openstack/manifests/mongo_secondary.pp
+@@ -23,6 +23,7 @@ class openstack::mongo_secondary (
+ 
+   class {'::mongodb::client':
+   } ->
++
+   class {'::mongodb::server':
+     port          => $mongodb_port,
+     verbose       => $verbose,
+@@ -32,5 +33,9 @@ class openstack::mongo_secondary (
+     auth          => true,
+     keyfile       => '/etc/mongodb.key',
+     set_parameter => $set_parameter,
++  } ->
++
++  exec { 'chown_mongo_log':
++    command => "/bin/chown -R syslog:syslog ${mongodb::params::logpath}",
+   }
+ }
+diff --git a/deployment/puppet/openstack/templates/62-mongod.conf.erb b/deployment/puppet/openstack/templates/62-mongod.conf.erb
+index d87fea1..2e01a74 100644
+--- a/deployment/puppet/openstack/templates/62-mongod.conf.erb
++++ b/deployment/puppet/openstack/templates/62-mongod.conf.erb
+@@ -1,4 +1,4 @@
+-:syslogtag, contains, "mongod" -/var/log/mongod.log
++:syslogtag, contains, "mongod" -/var/log/mongodb/mongodb.log
+ 
+ ### stop further processing for the matched entries
+ & ~
