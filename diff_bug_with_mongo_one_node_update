@@ -1,0 +1,50 @@
+diff --git a/deployment/puppet/openstack/manifests/mongo_primary.pp b/deployment/puppet/openstack/manifests/mongo_primary.pp
+index 7f7f324..2534824 100644
+--- a/deployment/puppet/openstack/manifests/mongo_primary.pp
++++ b/deployment/puppet/openstack/manifests/mongo_primary.pp
+@@ -6,7 +6,7 @@ class openstack::mongo_primary (
+   $ceilometer_metering_secret   = undef,
+   $ceilometer_db_password       = "ceilometer",
+   $ceilometer_metering_secret   = "ceilometer",
+-  $ceilometer_replset_members   = ['mongo2', 'mongo3'],
++  $ceilometer_replset_members   = undef,
+   $mongodb_bind_address         = ['0.0.0.0'],
+   $mongodb_port                 = 27017,
+   $use_syslog                   = true,
+@@ -21,7 +21,7 @@ class openstack::mongo_primary (
+   }
+ 
+ 
+-  if size($ceilometer_replset_members) > 0 {
++  if size($ceilometer_replset_members) > 1 {
+     $replset_setup = true
+     $keyfile = '/etc/mongodb.key'
+   } else {
+diff --git a/deployment/puppet/osnailyfacter/modular/roles/mongo_primary.pp b/deployment/puppet/osnailyfacter/modular/roles/mongo_primary.pp
+index 44beebb..1f68190 100644
+--- a/deployment/puppet/osnailyfacter/modular/roles/mongo_primary.pp
++++ b/deployment/puppet/osnailyfacter/modular/roles/mongo_primary.pp
+@@ -6,6 +6,12 @@ $internal_address = hiera('internal_address')
+ $ceilometer_hash  = hiera('ceilometer')
+ $nodes_hash       = hiera('nodes')
+ $roles            = node_roles($nodes_hash, hiera('uid'))
++$mongo_nodes      = mongo_hosts($nodes_hash, 'array')
++
++if size($mongo_nodes) > 1 {
++  $ceilometer_replset_members = $mongo_nodes
++  $replset = 'ceilometer'
++}
+ 
+ ####################################################################
+ 
+@@ -13,8 +19,8 @@ class { 'openstack::mongo_primary':
+   mongodb_bind_address        => [ '127.0.0.1', $internal_address ],
+   ceilometer_metering_secret  => $ceilometer_hash['metering_secret'],
+   ceilometer_db_password      => $ceilometer_hash['db_password'],
+-  ceilometer_replset_members  => mongo_hosts($nodes_hash, 'array', 'mongo'),
+-  replset                     => 'ceilometer',
++  ceilometer_replset_members  => $ceilometer_replset_members,
++  replset                     => $replset,
+   use_syslog                  => $use_syslog,
+   debug                       => $debug,
+ }
